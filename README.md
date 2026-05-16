@@ -1,6 +1,6 @@
 # 📱 WhatsApp API & Webhook
 
-A robust, production-ready API and Webhook system for sending and receiving WhatsApp messages. Built with **Express.js** and powered by [whatsapp-web.js](https://docs.wwebjs.dev/), this service provides a secure way to integrate WhatsApp messaging into your existing applications.
+A robust, production-ready API and Webhook system for sending and receiving WhatsApp messages.
 
 ---
 
@@ -18,7 +18,7 @@ A robust, production-ready API and Webhook system for sending and receiving What
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
-- **Node.js** (v16.x or higher recommended)
+- **Node.js** (v22.x or higher recommended)
 - **npm** (comes with Node.js)
 - A smartphone with **WhatsApp** installed (to scan the initial QR code)
 
