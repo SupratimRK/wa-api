@@ -15,16 +15,6 @@ A robust, production-ready API and Webhook system for sending and receiving What
 
 ---
 
-## 🛠️ Tech Stack
-
-- **Runtime**: [Node.js](https://nodejs.org/)
-- **Framework**: [Express.js](https://expressjs.com/)
-- **WhatsApp Engine**: [whatsapp-web.js](https://docs.wwebjs.dev/)
-- **Security**: [Helmet.js](https://helmetjs.github.io/)
-- **Authentication**: Custom API Key Middleware
-
----
-
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
@@ -144,6 +134,16 @@ src/
 - **API Key Protection**: All sensitive endpoints are protected by a mandatory API key check.
 - **Input Validation**: Basic validation ensures required fields are present before processing requests.
 - **Secure Webhooks**: HMAC signatures ensure the integrity and authenticity of incoming data.
+
+---
+
+## 🎖️ Credits
+
+- **Runtime**: [Node.js](https://nodejs.org/)
+- **Framework**: [Express.js](https://expressjs.com/)
+- **WhatsApp Engine**: [whatsapp-web.js](https://docs.wwebjs.dev/)
+- **Security**: [Helmet.js](https://helmetjs.github.io/)
+- **QR Code Terminal**: [qrcode-terminal](https://www.npmjs.com/package/qrcode-terminal)
 
 ---
 
