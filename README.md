@@ -1,17 +1,41 @@
-# 📱 WhatsApp API & Webhook
+# 📱 wa-api: WhatsApp API & Webhook Layer
 
-A robust, production-ready API and Webhook system for sending and receiving WhatsApp messages.
+A robust, expressive, production-ready REST API and Webhook system for seamlessly sending and receiving WhatsApp messages.
 
 ---
 
-## ✨ Features
+## 🏗️ Architecture Flow
 
-- **🚀 Send Messages via API**: Easily send text messages to any WhatsApp number using a secure RESTful endpoint.
-- **🔄 Real-time Webhooks**: Receive incoming messages instantly via a secure webhook with HMAC SHA256 signature verification.
-- **🔐 Multi-method Authentication**: Secure your API using either `Authorization: Bearer <API_KEY>` or `x-api-key: <API_KEY>` headers.
-- **📂 Modular Architecture**: Clean, layered design (Routes $\rightarrow$ Handlers $\rightarrow$ Services) for easy maintenance and scalability.
-- **💾 Persistent Session**: Uses `LocalAuth` to save your WhatsApp session, so you don't need to scan the QR code every time you restart.
-- **🛡️ Production-Grade Security**: Integrated with `helmet` for HTTP header security and custom middleware for API key validation.
+```mermaid
+sequenceDiagram
+    participant App as Your System
+    participant API as WA-API
+    participant WA as WhatsApp Core
+    participant Webhook as Webhook URL
+
+    %% Sending Messages
+    Note over App,WA: 📤 Outbound (Sending)
+    App->>API: POST /api/v1/messages/send
+    API->>WA: Broadcast Message
+    WA-->>API: Delivered Acknowledgment
+    API-->>App: 200 OK (Success)
+
+    %% Receiving Messages
+    Note over WA,Webhook: 📥 Inbound (Receiving)
+    WA->>API: Incoming WhatsApp Message
+    API->>Webhook: POST with HMAC sha256 Signature
+    Webhook-->>API: 200 OK
+```
+
+---
+
+## ✨ Why `wa-api`?
+
+- **⚡ Instant API Access**: Fire text messages to any WhatsApp number via a clean, authorized REST endpoint.
+- **📡 Real-time Webhooks**: Get notified instantly when a message arrives via a secure webhook mechanism.
+- **🔐 Flexible Auth**: Protect your API natively using either `Authorization: Bearer <API_KEY>` or `x-api-key: <API_KEY>`.
+- **💻 Session Persistence**: Stop scanning QR codes daily. Employs `LocalAuth` to safely persist sessions locally across restarts.
+- **🛡️ Production-Grade**: Layered architecture (Routes $\rightarrow$ Handlers $\rightarrow$ Services), global error tracking, `helmet` security, and signature validation.
 
 ---
 
@@ -26,9 +50,9 @@ Before you begin, ensure you have the following installed:
 
 ## 🚀 Installation & Setup
 
-1. **Clone the repository** (or download the source code):
+1. **Clone the repository**:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/SupratimRK/wa-api
    cd wa-api
    ```
 
@@ -38,7 +62,7 @@ Before you begin, ensure you have the following installed:
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory and populate it with your configuration:
+   Create a `.env.development` (or `.env.production`) file in the root directory:
    ```env
    PORT=3000
    API_KEY=your_super_secret_api_key
@@ -55,28 +79,28 @@ Before you begin, ensure you have the following installed:
    Upon starting, a **QR code** will be generated in your terminal. 
    - Open WhatsApp on your phone.
    - Go to **Settings** $\rightarrow$ **Linked Devices**.
-   - Tap **Link a Device** and scan the QR code in your terminal.
+   - Tap **Link a Device** and scan the QR code.
 
 ---
 
 ## 🔌 API Reference
 
 ### 1. Send a Message
-Send a text message to a specific WhatsApp number.
+Dispatch a text message to a specific WhatsApp number.
 
 **Endpoint:** `POST /api/v1/messages/send`
 
-**Authentication:**
+**Authentication Headers (Choose One):**
 - `Authorization: Bearer <API_KEY>`
-- **OR** `x-api-key: <API_KEY>`
+- `x-api-key: <API_KEY>`
 
 **Request Body (`application/json`):**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `number` | `string` | Yes | The recipient's phone number (e.g., `"1234567890"`). Do not include `+` or spaces. |
-| `message` | `string` | Yes | The text content of the message. |
+| `number` | `string` | Yes | The recipient's phone number without `+` or spaces (e.g., `"1234567890"`). |
+| `message` | `string` | Yes | The text content of your message. |
 
-**Example Request:**
+**Example Request (cURL):**
 ```bash
 curl -X POST http://localhost:3000/api/v1/messages/send \
      -H "x-api-key: your_super_secret_api_key" \
@@ -84,7 +108,7 @@ curl -X POST http://localhost:3000/api/v1/messages/send \
      -d '{"number": "1234567890", "message": "Hello from secure API!"}'
 ```
 
-**Example Response (`200 OK`):**
+**Success Response (`200 OK`):**
 ```json
 {
   "success": true,
@@ -93,61 +117,100 @@ curl -X POST http://localhost:3000/api/v1/messages/send \
 }
 ```
 
+**Common Error Responses:**
+- `400 Bad Request`: When `number` or `message` is missing, or the number is completely invalid on WhatsApp.
+- `401 Unauthorized`: When the API key is missing or invalid.
+- `404 Not Found`: When the target number is not registered on WhatsApp.
+
+```json
+{
+  "error": "The phone number is not registered on WhatsApp."
+}
+```
+
 ---
 
 ## 📡 Webhook Integration
 
-The application acts as a forwarder for incoming WhatsApp messages. When a message is received, it is dispatched to your configured `WEBHOOK_URL`.
+The application forwards incoming WhatsApp messages to your configured `WEBHOOK_URL` in real-time. 
+
+### Webhook Payload Example
+
+When a message is received, `wa-api` fires a `POST` request to your webhook with the following JSON structure:
+
+```json
+{
+  "id": "false_1234567890@c.us_3EB0...",
+  "from": "1234567890",
+  "body": "Hello there!",
+  "timestamp": 1690000000
+}
+```
 
 ### 🛡️ Security: Signature Verification
 
-To prevent unauthorized entities from spoofing messages to your webhook, every request includes an **HMAC SHA256** signature in the `X-Webhook-Signature` header.
+To prevent unauthorized entities from spoofing alerts, every request includes a cryptographic **HMAC SHA256** signature. The signature is computed using your `WEBHOOK_SECRET` and attached via the `X-Webhook-Signature` header.
 
-**How to verify on your server:**
-1. Retrieve the raw request body.
-2. Compute the HMAC SHA256 hash using your `WEBHOOK_SECRET`.
-3. Compare your computed hash with the value in the `X-Webhook-Signature` header.
+**Verification Example (Node.js/Express on your receiving server):**
+
+```javascript
+const crypto = require('crypto');
+
+app.post('/webhook', express.text({ type: 'application/json' }), (req, res) => {
+    const signatureHeader = req.headers['x-webhook-signature'];
+    const payloadSignature = signatureHeader.replace('sha256=', '');
+
+    const computedSignature = crypto
+        .createHmac('sha256', process.env.WEBHOOK_SECRET)
+        .update(req.body) // Note: Needs the raw request body string
+        .digest('hex');
+
+    if (computedSignature !== payloadSignature) {
+        return res.status(401).send('Invalid webhook signature!');
+    }
+
+    const data = JSON.parse(req.body);
+    console.log(`Received message from ${data.from}: ${data.body}`);
+    res.sendStatus(200);
+});
+```
 
 ---
 
 ## 📂 Project Structure
 
-The project follows a modular, layered architecture:
-
 ```text
 src/
-├── app.js              # Express application configuration & middleware setup
-├── index.js            # Server entry point & WhatsApp client initialization
-├── config/             # Environment variable management
-├── handlers/           # Request/Response logic (Controllers)
-├── middlewares/        # Auth, Error handling, and Security middlewares
-├── routes/             # API route definitions
-├── services/           # Business logic & WhatsApp client interactions
-└── whatsapp/           # WhatsApp client instance & configuration
+├── app.js              # Express app setup & middleware
+├── index.js            # Server entry & WhatsApp initialization
+├── config/             # Environment variables
+├── handlers/           # Request controllers
+├── middlewares/        # Auth, Error handling, Security
+├── routes/             # API routing limits
+├── services/           # WhatsApp Client actions & Webhook dispatcher
+└── whatsapp/           # Core WhatsApp instance configuration
 ```
 
 ---
 
 ## 🔒 Security Measures
 
-- **Helmet.js**: Automatically sets various HTTP headers to protect against common web vulnerabilities (XSS, clickjacking, etc.).
-- **API Key Protection**: All sensitive endpoints are protected by a mandatory API key check.
-- **Input Validation**: Basic validation ensures required fields are present before processing requests.
-- **Secure Webhooks**: HMAC signatures ensure the integrity and authenticity of incoming data.
+- **Helmet.js Integration**: Auto-mitigates XSS, clickjacking, and mime-sniffing.
+- **Strict API Key Validation**: Reject unauthorized network interactions instantly.
+- **HMAC Signatures**: Total integrity and spoof-protection for outbound webhooks.
 
 ---
 
-## 🎖️ Credits
+## 🎖️ Credits & Tech Stack
 
 - **Runtime**: [Node.js](https://nodejs.org/)
 - **Framework**: [Express.js](https://expressjs.com/)
-- **WhatsApp Engine**: [whatsapp-web.js](https://docs.wwebjs.dev/)
+- **Core Engine**: [whatsapp-web.js](https://docs.wwebjs.dev/)
 - **Security**: [Helmet.js](https://helmetjs.github.io/)
-- **QR Code Terminal**: [qrcode-terminal](https://www.npmjs.com/package/qrcode-terminal)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is open-sourced under the MIT License.
 
