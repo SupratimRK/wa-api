@@ -15,8 +15,25 @@ async function sendMessage(number, message) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
     const chatId = `${sanitizedNumber}@c.us`;
 
-    await client.sendMessage(chatId, message);
-    return { success: true, message: 'Message sent successfully', chatId };
+    try {
+        // Optional: Check if number exists (might slow down sending slightly, but prevents untracked errors)
+        const isRegistered = await client.isRegisteredUser(chatId);
+        if (!isRegistered) {
+            const error = new Error('The phone number is not registered on WhatsApp.');
+            error.status = 404;
+            throw error;
+        }
+
+        await client.sendMessage(chatId, message);
+        return { success: true, message: 'Message sent successfully', chatId };
+    } catch (error) {
+        if (error.message && error.message.includes('No LID for user')) {
+            const newError = new Error('Invalid phone number or user not found on WhatsApp.');
+            newError.status = 400;
+            throw newError;
+        }
+        throw error;
+    }
 }
 
 module.exports = {
