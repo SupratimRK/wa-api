@@ -1,6 +1,9 @@
 # Node modules
 node_modules/
 
+# Uploads
+uploads/
+
 # Local env files
 .env
 .env.development

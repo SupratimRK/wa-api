@@ -44,7 +44,9 @@ async function dispatchWebhook(client, message) {
             id: message.id._serialized,
             from: fromNumber,
             body: message.body,
-            timestamp: message.timestamp
+            timestamp: message.timestamp,
+            hasMedia: message.hasMedia,
+            mediaUrl: message.mediaUrl || null
         };
 
         const payloadString = JSON.stringify(payloadObject);

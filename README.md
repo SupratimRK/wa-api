@@ -64,7 +64,7 @@ Before you begin, ensure you have the following installed:
 3. **Configure Environment Variables**:
    Create a `.env.development` (or `.env.production`) file in the root directory:
    ```env
-   PORT=3000
+   PORT=5000
    API_KEY=your_super_secret_api_key
    WEBHOOK_URL=https://your-domain.com/webhook
    WEBHOOK_SECRET=your_super_secret_webhook_signature_key
@@ -85,8 +85,8 @@ Before you begin, ensure you have the following installed:
 
 ## 🔌 API Reference
 
-### 1. Send a Message
-Dispatch a text message to a specific WhatsApp number.
+### 1. Send a Message or Media
+Dispatch a text message or media to a specific WhatsApp number.
 
 **Endpoint:** `POST /api/v1/messages/send`
 
@@ -94,18 +94,40 @@ Dispatch a text message to a specific WhatsApp number.
 - `Authorization: Bearer <API_KEY>`
 - `x-api-key: <API_KEY>`
 
-**Request Body (`application/json`):**
+**Request Options (`application/json` or `multipart/form-data`):**
+
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `number` | `string` | Yes | The recipient's phone number without `+` or spaces (e.g., `"1234567890"`). |
-| `message` | `string` | Yes | The text content of your message. |
+| `message` | `string` | No* | The text content or media caption. (*Required if no media is sent). |
+| `mediaUrl` | `string` | No | (JSON) URL of a file to download and send (supports Images, PDFs, Videos, Documents, Audio). |
+| `mediaBase64` | `string` | No | (JSON) Base64 encoded string of the file (e.g., `data:image/png;base64,...` or application/pdf). |
+| `media` | `file` | No | (Form-Data) Direct file upload attachment (supports any WhatsApp compatible file type). |
 
-**Example Request (cURL):**
+**Example 1: Send Text Message (JSON)**
 ```bash
-curl -X POST http://localhost:3000/api/v1/messages/send \
+curl -X POST http://localhost:5000/api/v1/messages/send \
      -H "x-api-key: your_super_secret_api_key" \
      -H "Content-Type: application/json" \
      -d '{"number": "1234567890", "message": "Hello from secure API!"}'
+```
+
+**Example 2: Send Media via URL (JSON)**
+Can be used to send PDFs, Videos, Audio, and Documents too, just provide a valid URL.
+```bash
+curl -X POST http://localhost:5000/api/v1/messages/send \
+     -H "x-api-key: your_super_secret_api_key" \
+     -H "Content-Type: application/json" \
+     -d '{"number": "1234567890", "message": "Check out this document!", "mediaUrl": "https://example.com/invoice.pdf"}'
+```
+
+**Example 3: Send Local File (Form-Data)**
+```bash
+curl -X POST http://localhost:5000/api/v1/messages/send \
+     -H "x-api-key: your_super_secret_api_key" \
+     -F "number=1234567890" \
+     -F "message=My cool photo" \
+     -F "media=@/path/to/local/photo.jpg"
 ```
 
 **Success Response (`200 OK`):**
@@ -136,15 +158,28 @@ The application forwards incoming WhatsApp messages to your configured `WEBHOOK_
 
 ### Webhook Payload Example
 
-When a message is received, `wa-api` fires a `POST` request to your webhook with the following JSON structure:
+When a message is received, `wa-api` fires a `POST` request to your webhook with the following JSON structure. If it contains media, it automatically downloads and saves it to the local `uploads/` folder.
 
 ```json
 {
   "id": "false_1234567890@c.us_3EB0...",
   "from": "1234567890",
   "body": "Hello there!",
-  "timestamp": 1690000000
+  "timestamp": 1690000000,
+  "hasMedia": true,
+  "mediaUrl": "/uploads/1690000000-abcdef.png"
 }
+```
+
+### 🔒 Accessing Protected Media
+Downloaded media files inside `/uploads` are protected by your API key. **Do not pass the API key in the URL query parameters** as this compromises it in web server logs and browser histories. 
+
+Retrieve the file securely by passing the API key in the headers:
+
+```bash
+curl -X GET http://localhost:5000/uploads/1690000000-abcdef.png \
+     -H "x-api-key: your_super_secret_api_key" \
+     --output downloaded_media.png
 ```
 
 ### 🛡️ Security: Signature Verification
@@ -213,4 +248,3 @@ src/
 ## 📄 License
 
 This project is open-sourced under the MIT License.
-
